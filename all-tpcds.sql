@@ -2088,8 +2088,8 @@ FROM
    WHERE store_sales.ss_sold_date_sk = date_dim.d_date_sk
      AND store_sales.ss_store_sk = store.s_store_sk
      AND store_sales.ss_hdemo_sk = household_demographics.hd_demo_sk
-     AND (date_dim.d_dom BETWEEN 1 AND 3
-          OR date_dim.d_dom BETWEEN 25 AND 28)
+     AND ((date_dim.d_dom BETWEEN 1 AND 3)
+          OR (date_dim.d_dom BETWEEN 25 AND 28))
      AND (household_demographics.hd_buy_potential = '>10000'
           OR household_demographics.hd_buy_potential = 'Unknown')
      AND household_demographics.hd_vehicle_count > 0
@@ -4261,7 +4261,7 @@ LEFT OUTER JOIN catalog_returns ON (cr_item_sk = cs_item_sk
                                     AND cr_order_number = cs_order_number)
 WHERE d1.d_week_seq = d2.d_week_seq
   AND inv_quantity_on_hand < cs_quantity
-  AND d3.d_date > d1.d_date + 5 -- SQL Server: DATEADD(day, 5, d1.d_date)
+  AND d3.d_date > d1.d_date + 5
   AND hd_buy_potential = '>10000'
   AND d1.d_year = 1999
   AND cd_marital_status = 'D'
@@ -5058,7 +5058,7 @@ ORDER BY lochierarchy DESC NULLS FIRST,
          rank_within_parent NULLS FIRST
 LIMIT 100;
 SELECT count(*)
-FROM ((SELECT DISTINCT c_last_name,
+FROM (SELECT DISTINCT c_last_name,
                          c_first_name,
                          d_date
          FROM store_sales,
@@ -5066,9 +5066,9 @@ FROM ((SELECT DISTINCT c_last_name,
               customer
          WHERE store_sales.ss_sold_date_sk = date_dim.d_date_sk
            AND store_sales.ss_customer_sk = customer.c_customer_sk
-           AND d_month_seq BETWEEN 1200 AND 1200+11)
+           AND d_month_seq BETWEEN 1200 AND 1200+11
       EXCEPT
-        (SELECT DISTINCT c_last_name,
+        SELECT DISTINCT c_last_name,
                          c_first_name,
                          d_date
          FROM catalog_sales,
@@ -5076,9 +5076,9 @@ FROM ((SELECT DISTINCT c_last_name,
               customer
          WHERE catalog_sales.cs_sold_date_sk = date_dim.d_date_sk
            AND catalog_sales.cs_bill_customer_sk = customer.c_customer_sk
-           AND d_month_seq BETWEEN 1200 AND 1200+11)
+           AND d_month_seq BETWEEN 1200 AND 1200+11
       EXCEPT
-        (SELECT DISTINCT c_last_name,
+        SELECT DISTINCT c_last_name,
                          c_first_name,
                          d_date
          FROM web_sales,
@@ -5086,7 +5086,7 @@ FROM ((SELECT DISTINCT c_last_name,
               customer
          WHERE web_sales.ws_sold_date_sk = date_dim.d_date_sk
            AND web_sales.ws_bill_customer_sk = customer.c_customer_sk
-           AND d_month_seq BETWEEN 1200 AND 1200+11)) cool_cust ;
+           AND d_month_seq BETWEEN 1200 AND 1200+11) cool_cust ;
 SELECT *
 FROM
   (SELECT count(*) h8_30_to_9

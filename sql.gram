@@ -1,79 +1,108 @@
 Statements <- Select (';' Select )* ';'*
-Select <- WithClause? ((SelectClause FromClause?) / FromClause SelectClause?) WhereClause? GroupByClause? HavingClause? OrderByClause? LimitClause?
+Select <- SimpleSelect (SetopClause SimpleSelect)*
+SetopClause <- ('UNION'i / 'EXCEPT'i / 'INTERSECT'i) 'ALL'i?
+SimpleSelect <- WithClause? ((SelectClause FromClause?) / FromClause SelectClause?) WhereClause? GroupByClause? HavingClause? OrderByClause? LimitClause?
 
 WithStatement <- Identifier 'AS'i SubqueryReference
 
 WithClause <- 'WITH'i List(WithStatement)
 SelectClause <- 'SELECT'i ('*' / List(ExpressionWithAlias))
-ColumnNameAliases <- '(' List(Identifier) ')'
-TableReference <- 
-    (Identifier 'LEFT'i? 'OUTER'i? 'JOIN'i Identifier 'ON'i Expression) / 
-    (SubqueryReference 'AS'i? Identifier ColumnNameAliases?) /
-    (Identifier (Identifier)?) 
+ColumnNameAliases <- Parens(List(Identifier))
 
-FromClause <- 'FROM'i TableReference (',' TableReference)*
+TableReference <-
+    (SubqueryReference 'AS'i? Identifier ColumnNameAliases?) /
+    (Identifier ('AS'i? Identifier)?)
+
+ExplicitJoin <- ('LEFT'i / 'FULL'i)? 'OUTER'i? 'JOIN'i TableReference 'ON'i Expression
+
+FromClause <- 'FROM'i TableReference ((',' TableReference) / ExplicitJoin)*
 WhereClause <- 'WHERE'i Expression
 GroupByClause <- 'GROUP'i 'BY'i List(SingleExpression) # TODO too strict, can group by other things?
 HavingClause <- 'HAVING'i Expression
 
-SubqueryReference <- '(' Select ')'
+SubqueryReference <- Parens(Select)
 
-OrderByExpression <- Expression 'DESC'i?
+OrderByExpression <- Expression ('DESC'i / 'ASC'i)?  ('NULLS'i 'FIRST'i / 'LAST'i)?
 OrderByClause <- 'ORDER'i 'BY'i List(OrderByExpression)
 
 LimitClause <- 'LIMIT'i NumberLiteral
 
-Identifier <- !('WHERE'i / 'GROUP'i / 'FROM'i) < [a-zA-Z0-9_]+ > # identifier can't be top-level keyword
+# TODO: this also fails prefix keyword matches, need to specify whole word match
+ReservedKeyword <-
+    'SELECT'i      /
+    'FROM'i        /
+    'WHERE'i       /
+    'GROUP'i 'BY'i /
+    'HAVING'i      /
+    'UNION'i       /
+    'ORDER'i 'BY'i /
+    'WHEN'i        /
+    'JOIN'i        /
+    'ON'i /
+    'INTERSECT'i # TODO expand on this
+
+PlainIdentifier <-  !ReservedKeyword  <[a-zA-Z0-9_]+>  # unqoted identifier can't be top-level keyword
+QuotedIdentifier <- '"' [^"]* '"'
+Identifier <- QuotedIdentifier / PlainIdentifier
 NumberLiteral      <- < [+-]?[0-9]*([.][0-9]*)? >
 StringLiteral <- '\'' [^\']* '\''
+TypeSpecifier <- Identifier (Parens(List(NumberLiteral)))?
 
 ColumnReference <- (Identifier '.')?Identifier
-FunctionCall <- Identifier '(' List(Expression) ')'
-ParenthesisExpression <- '(' Expression ')'
+FunctionExpression <- Identifier Parens(List(Expression))
+ParenthesisExpression <- Parens(Expression)
 LiteralExpression <- StringLiteral / NumberLiteral
-CastExpression <- 'CAST' '(' Expression 'AS'i Identifier ')'
-ExtractExpression <- 'EXTRACT'i '(' Identifier 'FROM'i Expression ')'
-CountStarExpression <- 'COUNT'i '(' '*' ')'
-SubqueryExpression <- 'NOT'i? 'EXISTS'? SubqueryReference
-BetweenExpression <- ColumnReference 'BETWEEN'i SingleExpression 'AND'i SingleExpression # TODO too strict
-CaseExpression <- 'CASE'i 'WHEN'i Expression 'THEN'i Expression 'ELSE'i Expression 'END'i # TODO strict
+CastExpression <- 'CAST'i Parens(Expression 'AS'i TypeSpecifier)
+ExtractExpression <- 'EXTRACT'i Parens(ColumnReference 'FROM'i Expression)
+CountStarExpression <- 'COUNT'i Parens('*')
+SubqueryExpression <- 'NOT'i? 'EXISTS'i? SubqueryReference
+CaseExpression <- 'CASE'i ColumnReference? 'WHEN'i Expression 'THEN'i Expression ('ELSE'i Expression)? 'END'i # TODO strict
 DateExpression <- 'DATE'i Expression
 DistinctExpression <- 'DISTINCT'i Expression
-SubstringExpression <- 'SUBSTRING'i '(' Expression 'FROM'i NumberLiteral 'FOR'i NumberLiteral ')'
-LiteralListExpression <- '(' List(LiteralExpression) ')'
+SubstringExpression <- 'SUBSTRING'i Parens(Expression 'FROM'i NumberLiteral 'FOR'i NumberLiteral)
+LiteralListExpression <- Parens(List(Expression))
+FrameClause <- 'ROWS'i 'BETWEEN'i (('UNBOUNDED'i 'PRECEDING'i)) 'AND' (('CURRENT'i 'ROW'i))
+WindowExpression <- Parens(('PARTITION'i 'BY'i List(Expression))? OrderByClause? FrameClause?)
+IsNullExpression <- ColumnReference 'IS'i 'NOT'i? 'NULL'i # TODO
 
-SingleExpression <- 
+SingleExpression <-
     SubqueryExpression /
     LiteralListExpression /
-    ParenthesisExpression / 
-    BetweenExpression /
+    ParenthesisExpression /
     DateExpression /
     DistinctExpression /
     SubstringExpression /
+    IsNullExpression /
     CaseExpression /
     CountStarExpression /
-    CastExpression / 
+    CastExpression /
     ExtractExpression /
-    FunctionCall / 
-    ColumnReference / 
+    WindowExpression /
+    FunctionExpression /
+    ColumnReference /
     LiteralExpression
 
 ArithmeticOperator <- '+' / '-' / '*' / '/'
 LikeOperator <- 'NOT'i? 'LIKE'i
-InOperator <- 'NOT'i? 'IN'i
-BooleanOperator <- ('OR'i ![D]i) / 'AND'i # special handling to not match ORDER BY
+InOperator <- 'NOT'i? 'IN'i !'T'i # special handling to not match INTERSECT
+BooleanOperator <- ('OR'i !'D'i) / 'AND'i # special handling to not match ORDER BY
 ComparisionOperator <-  '=' / '<=' / '>=' / '<' / '>'
+WindowOperator <- 'OVER'i
+BetweenOperator <- 'BETWEEN'i
 
-Operator <-  
-    ArithmeticOperator / 
-    ComparisionOperator / 
-    BooleanOperator / 
+Operator <-
+    ArithmeticOperator /
+    ComparisionOperator /
+    BooleanOperator /
     LikeOperator /
-    InOperator
-    
+    InOperator /
+    WindowOperator /
+    BetweenOperator
+
 Expression <- SingleExpression (Operator SingleExpression)*
 ExpressionWithAlias <- Expression ('AS'i? Identifier)?
 
 # internal definitions
 %whitespace <- [ \t\n\r]*
-List(D) ← D (',' D)*
+List(D) <- D (',' D)*
+Parens(D) <- '(' D ')'
