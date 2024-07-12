@@ -1,0 +1,78 @@
+Statements <- Select (';' Select )* ';'*
+Select <- ((SelectClause FromClause?) / FromClause SelectClause?) WhereClause? GroupByClause? HavingClause? OrderByClause? LimitClause?
+
+SelectClause <- 'SELECT'i ('*' / List(ExpressionWithAlias))
+ColumnNameAliases <- '(' List(Identifier) ')'
+TableReference <- 
+    (Identifier 'LEFT'i? 'OUTER'i? 'JOIN'i Identifier 'ON'i Expression) / 
+    (SubqueryReference 'AS'i? Identifier ColumnNameAliases?) /
+    (Identifier (Identifier)?) 
+
+FromClause <- 'FROM'i TableReference (',' TableReference)*
+WhereClause <- 'WHERE'i Expression
+GroupByClause <- 'GROUP'i 'BY'i List(SingleExpression) # TODO too strict, can group by other things?
+HavingClause <- 'HAVING'i Expression
+
+SubqueryReference <- '(' Select ')'
+
+OrderByExpression <- Expression 'DESC'i?
+OrderByClause <- 'ORDER'i 'BY'i List(OrderByExpression)
+
+LimitClause <- 'LIMIT'i NumberLiteral
+
+Identifier <- !('WHERE'i / 'GROUP'i) < [a-zA-Z0-9_]+ > # identifier can't be top-level keyword
+NumberLiteral      <- < [+-]?[0-9]*([.][0-9]*)? >
+StringLiteral <- '\'' [^\']* '\''
+
+ColumnReference <- (Identifier '.')?Identifier
+FunctionCall <- Identifier '(' List(Expression) ')'
+ParenthesisExpression <- '(' Expression ')'
+LiteralExpression <- StringLiteral / NumberLiteral
+CastExpression <- 'CAST' '(' Expression 'AS'i Identifier ')'
+ExtractExpression <- 'EXTRACT'i '(' Identifier 'FROM'i Expression ')'
+CountStarExpression <- 'COUNT'i '(' '*' ')'
+SubqueryExpression <- 'NOT'i? 'EXISTS'? SubqueryReference
+BetweenExpression <- ColumnReference 'BETWEEN'i SingleExpression 'AND'i SingleExpression # TODO too strict
+CaseExpression <- 'CASE'i 'WHEN'i Expression 'THEN'i Expression 'ELSE'i Expression 'END'i # TODO strict
+DateExpression <- 'DATE'i Expression
+DistinctExpression <- 'DISTINCT'i Expression
+SubstringExpression <- 'SUBSTRING'i '(' Expression 'FROM'i NumberLiteral 'FOR'i NumberLiteral ')'
+LiteralListExpression <- '(' List(LiteralExpression) ')'
+
+SingleExpression <- 
+    SubqueryExpression /
+    LiteralListExpression /
+    ParenthesisExpression / 
+    BetweenExpression /
+    DateExpression /
+    DistinctExpression /
+    SubstringExpression /
+    CaseExpression /
+    CountStarExpression /
+    CastExpression / 
+    ExtractExpression /
+    FunctionCall / 
+    ColumnReference / 
+    LiteralExpression
+
+ArithmeticOperator <- '+' / '-' / '*' / '/'
+LikeOperator <- 'NOT'i? 'LIKE'i
+InOperator <- 'NOT'i? 'IN'i
+BooleanOperator <- ('OR'i ![D]i) / 'AND'i # special handling to not match ORDER BY
+ComparisionOperator <-  '=' / '<=' / '>=' / '<' / '>'
+
+Operator <-  
+    ArithmeticOperator / 
+    ComparisionOperator / 
+    BooleanOperator / 
+    LikeOperator /
+    InOperator
+    
+Expression <- SingleExpression (Operator SingleExpression)*
+ExpressionWithAlias <- Expression ('AS'i Identifier)?
+
+# internal definitions
+%whitespace <- [ \t\n\r]*
+List(D) ← D (',' D)*
+
+
