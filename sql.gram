@@ -1,6 +1,9 @@
 Statements <- Select (';' Select )* ';'*
-Select <- ((SelectClause FromClause?) / FromClause SelectClause?) WhereClause? GroupByClause? HavingClause? OrderByClause? LimitClause?
+Select <- WithClause? ((SelectClause FromClause?) / FromClause SelectClause?) WhereClause? GroupByClause? HavingClause? OrderByClause? LimitClause?
 
+WithStatement <- Identifier 'AS'i SubqueryReference
+
+WithClause <- 'WITH'i List(WithStatement)
 SelectClause <- 'SELECT'i ('*' / List(ExpressionWithAlias))
 ColumnNameAliases <- '(' List(Identifier) ')'
 TableReference <- 
@@ -20,7 +23,7 @@ OrderByClause <- 'ORDER'i 'BY'i List(OrderByExpression)
 
 LimitClause <- 'LIMIT'i NumberLiteral
 
-Identifier <- !('WHERE'i / 'GROUP'i) < [a-zA-Z0-9_]+ > # identifier can't be top-level keyword
+Identifier <- !('WHERE'i / 'GROUP'i / 'FROM'i) < [a-zA-Z0-9_]+ > # identifier can't be top-level keyword
 NumberLiteral      <- < [+-]?[0-9]*([.][0-9]*)? >
 StringLiteral <- '\'' [^\']* '\''
 
@@ -69,10 +72,8 @@ Operator <-
     InOperator
     
 Expression <- SingleExpression (Operator SingleExpression)*
-ExpressionWithAlias <- Expression ('AS'i Identifier)?
+ExpressionWithAlias <- Expression ('AS'i? Identifier)?
 
 # internal definitions
 %whitespace <- [ \t\n\r]*
 List(D) ← D (',' D)*
-
-

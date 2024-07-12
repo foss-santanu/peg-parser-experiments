@@ -52,19 +52,21 @@ int main(int argc, char** argv)
     std::string input((std::istreambuf_iterator<char>(t2)),
                      std::istreambuf_iterator<char>());
 
-  vector<double> result;
     auto start_parser_execute = chrono::system_clock::now();
 
-
-  auto ok = p.parse(input, result);
+auto n = 100;
+auto ok = 0;
+for (size_t i = 0; i < n; i++) {
+    vector<double> result;
+   ok += p.parse(input, result);
+}
   auto end_parser_execute = chrono::system_clock::now();
 
   auto parse_ms
           = chrono::duration_cast<chrono::milliseconds>(
                 end_parser_execute - start_parser_execute)
-                .count();
+                .count() / n;
 
   // Print the result
   printf("parse %lld\n", parse_ms);
-  printf("%d\n", ok);
 }
