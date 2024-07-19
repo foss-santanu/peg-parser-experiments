@@ -4659,7 +4659,7 @@ public:
 
   const Definition &operator[](const char *s) const { return (*grammar_)[s]; }
 
-  const Grammar &get_grammar() const { return *grammar_; }
+  Grammar &get_grammar() const { return *grammar_; }
 
   void disable_eoi_check() {
     if (grammar_ != nullptr) {

@@ -1,8 +1,13 @@
 Statements <- (SingleStatement (';' SingleStatement )* ';'*)
 
+Pipe <- '%>%'
+DplyrStatement <- Identifier Pipe Verb (Pipe Verb)*
+VerbName <- 'group_by' / 'summarise' / 'filter'
+Argument <- Expression / (Identifier '=' Expression)
+Verb <- VerbName Parens(List(Argument))
 
 
-SingleStatement <- SelectStatement  
+SingleStatement <- SelectStatement / DplyrStatement
 SelectStatement <- SimpleSelect (SetopClause SimpleSelect)*
 
 SetopClause <- ('UNION'i / 'EXCEPT'i / 'INTERSECT'i) 'ALL'i?

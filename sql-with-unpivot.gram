@@ -1,8 +1,7 @@
-Statements <- (SingleStatement (';' SingleStatement )* ';'*)
-
-
-
-SingleStatement <- SelectStatement  
+Statements <- SingleStatement (';' SingleStatement )* ';'*
+UnpivotStatement <- 'UNPIVOT' Identifier
+    'ON' Parens(List(Identifier) / '*')
+SingleStatement <- SelectStatement / UnpivotStatement
 SelectStatement <- SimpleSelect (SetopClause SimpleSelect)*
 
 SetopClause <- ('UNION'i / 'EXCEPT'i / 'INTERSECT'i) 'ALL'i?

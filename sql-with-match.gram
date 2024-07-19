@@ -2,25 +2,36 @@ Statements <- (SingleStatement (';' SingleStatement )* ';'*)
 
 
 
-SingleStatement <- SelectStatement  
+
+SingleStatement <- SelectStatement
 SelectStatement <- SimpleSelect (SetopClause SimpleSelect)*
 
 SetopClause <- ('UNION'i / 'EXCEPT'i / 'INTERSECT'i) 'ALL'i?
 
 SimpleSelect <- WithClause? SelectClause FromClause? WhereClause? GroupByClause? HavingClause? OrderByClause? LimitClause?
 
+
 WithStatement <- Identifier 'AS'i SubqueryReference
 WithClause <- 'WITH'i List(WithStatement)
 SelectClause <- 'SELECT'i ('*' / List(AliasedExpression))
 ColumnAliases <- Parens(List(Identifier))
 
+
+Name <- (Identifier? ':' Identifier) / Identifier
+Edge <- ('-' / '<-') '[' Name ']' ('-' / '->')
+Pattern <- Parens(Name) Edge Parens(Name)
+PropertyGraphReference <- 'MATCH'i Parens(List(Pattern)) 'ON'i Identifier
+
 TableReference <-
+    PropertyGraphReference /
     (SubqueryReference 'AS'i? Identifier ColumnAliases?) /
     (Identifier ('AS'i? Identifier)?)
 
 ExplicitJoin <- ('LEFT'i / 'FULL'i)? 'OUTER'i? 'JOIN'i TableReference 'ON'i Expression
 
 FromClause <- 'FROM'i TableReference ((',' TableReference) / ExplicitJoin)*
+
+
 WhereClause <- 'WHERE'i Expression
 GroupByClause <- 'GROUP'i 'BY'i List(Expression)
 HavingClause <- 'HAVING'i Expression
