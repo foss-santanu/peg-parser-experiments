@@ -37,10 +37,10 @@ int main(int argc, char** argv)
         return -1;
     }
     printf("PEG load base grammar %lld\n", construct_ms);
-    // enable error logging just in case
-   p.set_logger([](size_t line, size_t col, const string& msg) {
-         printf("Error on line %zu:%zu -> %s\n", line, col, msg.c_str());
-   });
+   //  // enable error logging just in case
+   // p.set_logger([](size_t line, size_t col, const string& msg) {
+   //       printf("Error on line %zu:%zu -> %s\n", line, col, msg.c_str());
+   // });
 
     auto input = FileToString(argv[2]);
 
