@@ -18,9 +18,10 @@ ColumnAliases <- Parens(List(Identifier))
 
 
 Name <- (Identifier? ':' Identifier) / Identifier
-Edge <- ('-' / '<-') '[' Name ']' ('-' / '->')
-Pattern <- Parens(Name) Edge Parens(Name)
-PropertyGraphReference <- 'MATCH'i Parens(List(Pattern)) 'ON'i Identifier
+Edge <- ('-' / '<-') '[' Name ']' ('->' / '-')
+Pattern <- Parens(Name WhereClause?) Edge Parens(Name WhereClause?)
+PropertyGraphReference <- 'GRAPH_TABLE'i '(' Identifier ',' 
+    'MATCH'i List(Pattern) 'COLUMNS'i Parens(List(ColumnReference)) ')' Identifier?
 
 TableReference <-
     PropertyGraphReference /
